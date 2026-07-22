@@ -1,0 +1,19 @@
+{
+  "name": "@svt/queue",
+  "private": true,
+  "version": "0.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "bullmq": "^5.34.0",
+    "ioredis": "^5.4.1"
+  },
+  "devDependencies": {
+    "@svt/config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.7.0"
+  }
+}

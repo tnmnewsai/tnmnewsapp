@@ -1,0 +1,61 @@
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f2f7;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: 320px;
+  padding: 2rem;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #dcdae4;
+  box-shadow: 0 8px 24px -12px rgba(25, 27, 36, 0.18);
+}
+
+.card h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+}
+
+.card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: #62667a;
+}
+
+.card input {
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #dcdae4;
+  font-size: 0.95rem;
+}
+
+.card button {
+  margin-top: 0.5rem;
+  padding: 0.55rem;
+  border-radius: 8px;
+  border: none;
+  background: #b8791f;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.card button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  margin: 0;
+  color: #b3261e;
+  font-size: 0.82rem;
+}

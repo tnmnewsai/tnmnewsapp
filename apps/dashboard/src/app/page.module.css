@@ -1,0 +1,23 @@
+.page {
+  min-height: 100vh;
+  padding: 2.5rem 3rem;
+  max-width: 720px;
+  margin: 0 auto;
+  font-family: var(--font-geist-sans);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.header button {
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #dcdae4;
+  background: #ffffff;
+  cursor: pointer;
+}

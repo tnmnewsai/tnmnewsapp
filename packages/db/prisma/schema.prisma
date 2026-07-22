@@ -1,0 +1,160 @@
+// Milestone 0 added tenancy (Account, Brand, User, Membership).
+// Milestone 1 adds SourceAsset + Transcript.
+// Every later milestone extends this file incrementally — see the build plan
+// at C:\Users\17205\.claude\plans\groovy-twirling-globe.md.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Top-level tenant. One customer of the tool.
+model Account {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brands      Brand[]
+  memberships Membership[]
+
+  @@map("accounts")
+}
+
+/// A property/channel under an Account — owns its own brand template,
+/// music/graphic libraries, and platform connections (added in later milestones).
+model Brand {
+  id        String   @id @default(cuid())
+  accountId String
+  name      String
+  slug      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  account      Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  memberships  Membership[]
+  sourceAssets SourceAsset[]
+
+  @@unique([accountId, slug])
+  @@index([accountId])
+  @@map("brands")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships         Membership[]
+  createdSourceAssets SourceAsset[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  CONTENT_APPROVER
+  PUBLISHING_APPROVER
+  VIEWER
+}
+
+/// Brand-scoped role grant. A user's permissions (including the two approval
+/// gates in Milestone 6/7) are always evaluated against a specific Brand.
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  accountId String
+  brandId   String?
+  role      Role
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  brand   Brand?  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, accountId, brandId])
+  @@index([accountId])
+  @@index([brandId])
+  @@map("memberships")
+}
+
+enum SourceAssetType {
+  VIDEO_UPLOAD
+  DRIVE_LINK
+  YOUTUBE_LINK
+  BLOG_URL
+}
+
+enum SourceAssetStatus {
+  PENDING
+  FETCHING
+  READY
+  FAILED
+}
+
+/// A piece of source content a brand brings into the tool. Deliberately
+/// generic (not "SourceVideo") so a future blog-to-video source (BLOG_URL)
+/// slots into the same downstream pipeline without a schema change.
+model SourceAsset {
+  id                String            @id @default(cuid())
+  brandId           String
+  type              SourceAssetType
+  sourceUrl         String?
+  originalFilename  String?
+  storageKey        String?
+  durationMs        Int?
+  status            SourceAssetStatus @default(PENDING)
+  errorMessage      String?
+  /// Captured at ingestion, not an afterthought — required before a Drive/
+  /// YouTube link or upload can be used downstream.
+  rightsAttestation Boolean           @default(false)
+  createdByUserId   String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  brand      Brand       @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  createdBy  User        @relation(fields: [createdByUserId], references: [id])
+  transcript Transcript?
+
+  @@index([brandId])
+  @@map("source_assets")
+}
+
+enum TranscriptStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+/// Provider-agnostic timestamped word list. Shape is intentionally the same
+/// whether the words came from ASR-on-video today or TTS-alignment-on-script
+/// for the future blog-to-video source — downstream consumers (captions,
+/// clip detection) never need to know which.
+model Transcript {
+  id             String           @id @default(cuid())
+  sourceAssetId  String           @unique
+  provider       String
+  language       String?
+  status         TranscriptStatus @default(PENDING)
+  /// [{ word, startMs, endMs, confidence }]
+  rawWords       Json?
+  /// Set once a human corrects the transcript (Milestone 2).
+  correctedWords Json?
+  errorMessage   String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  sourceAsset SourceAsset @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+
+  @@map("transcripts")
+}

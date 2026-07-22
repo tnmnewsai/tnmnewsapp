@@ -1,0 +1,28 @@
+{
+  "name": "@svt/auth",
+  "private": true,
+  "version": "0.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./edge": "./src/edge.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@svt/db": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "next-auth": "5.0.0-beta.25"
+  },
+  "peerDependencies": {
+    "next": "16.2.10"
+  },
+  "devDependencies": {
+    "@svt/config": "workspace:*",
+    "@types/bcryptjs": "^2.4.6",
+    "next": "16.2.10",
+    "typescript": "^5.7.0"
+  }
+}
