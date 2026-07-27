@@ -23,6 +23,7 @@ export default function AddSourceForm({
           <option value="YOUTUBE_LINK">YouTube link</option>
           <option value="DRIVE_LINK">Google Drive link</option>
           <option value="VIDEO_UPLOAD">Upload a file</option>
+          <option value="BLOG_URL">Blog URL</option>
         </select>
       </label>
 
@@ -33,7 +34,11 @@ export default function AddSourceForm({
         </label>
       ) : (
         <label>
-          {type === "YOUTUBE_LINK" ? "YouTube URL" : "Google Drive share link"}
+          {type === "YOUTUBE_LINK"
+            ? "YouTube URL"
+            : type === "DRIVE_LINK"
+              ? "Google Drive share link"
+              : "Blog article URL"}
           <input
             type="url"
             name="url"
@@ -41,10 +46,19 @@ export default function AddSourceForm({
             placeholder={
               type === "YOUTUBE_LINK"
                 ? "https://www.youtube.com/watch?v=..."
-                : "https://drive.google.com/file/d/.../view"
+                : type === "DRIVE_LINK"
+                  ? "https://drive.google.com/file/d/.../view"
+                  : "https://example.com/some-article"
             }
           />
         </label>
+      )}
+
+      {type === "BLOG_URL" && (
+        <p className={styles.help}>
+          The article gets narrated and turned into a video automatically (script, voice, and
+          AI-generated visuals) — this can take a couple of minutes.
+        </p>
       )}
 
       <label className={styles.checkboxLabel}>

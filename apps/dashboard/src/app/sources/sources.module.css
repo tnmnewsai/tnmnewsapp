@@ -47,6 +47,12 @@
   gap: 0.5rem !important;
 }
 
+.help {
+  color: #62667a;
+  font-size: 0.85rem;
+  margin: -0.25rem 0 0;
+}
+
 .form button {
   align-self: flex-start;
   margin-top: 0.25rem;
@@ -99,4 +105,311 @@
 .empty {
   color: #62667a;
   font-size: 0.9rem;
+}
+
+.clipEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #dcdae4;
+  background: #ffffff;
+  margin-bottom: 2rem;
+}
+
+.video {
+  width: 100%;
+  max-height: 360px;
+  border-radius: 8px;
+  background: #000;
+}
+
+.clipControls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.clipControls > label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: #62667a;
+}
+
+.clipControls input {
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #dcdae4;
+  font-size: 0.95rem;
+}
+
+.rangeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.clipControls button,
+.clipEditor > button {
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid #dcdae4;
+  background: #f3f2f7;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.formActions button:first-child {
+  background: #b8791f;
+  color: #ffffff;
+  border: none;
+  font-weight: 600;
+}
+
+.error {
+  color: #b3261e;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.wordList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  line-height: 1.8;
+}
+
+.wordChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.wordChip input {
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  padding: 0.05rem 0.2rem;
+  border-radius: 4px;
+}
+
+.wordChip input:hover,
+.wordChip input:focus {
+  border-color: #dcdae4;
+  background: #ffffff;
+}
+
+.wordChip button {
+  border: none;
+  background: none;
+  color: #b3261e;
+  cursor: pointer;
+  font-size: 0.75rem;
+  opacity: 0.4;
+  line-height: 1;
+}
+
+.wordChip button:hover {
+  opacity: 1;
+}
+
+.generateForm {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.generateForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: #62667a;
+}
+
+.generateForm input {
+  width: 5rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #dcdae4;
+  font-size: 0.95rem;
+}
+
+.generateForm button {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: #b8791f;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.candidateList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.candidateCard {
+  padding: 1rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid #dcdae4;
+  background: #ffffff;
+}
+
+.candidateHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.candidateRationale {
+  margin: 0 0 0.4rem;
+  color: #62667a;
+  font-size: 0.9rem;
+}
+
+.candidateRange {
+  margin: 0 0 0.6rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: #62667a;
+}
+
+.renderSection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #dcdae4;
+  background: #ffffff;
+  margin-bottom: 2rem;
+}
+
+.renderSection button {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: #b8791f;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.renderSection .video {
+  width: 100%;
+  max-height: 360px;
+  border-radius: 8px;
+  background: #000;
+}
+
+.brandingSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #dcdae4;
+  background: #ffffff;
+  margin-bottom: 2rem;
+}
+
+.brandingSection > label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: #62667a;
+}
+
+.brandingSection select,
+.brandingSection input[type="text"],
+.brandingSection input[type="number"] {
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid #dcdae4;
+  font-size: 0.9rem;
+}
+
+.brandingSection h3 {
+  margin: 0.4rem 0 0;
+  font-size: 0.95rem;
+}
+
+.overlayList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.overlayList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: #f3f2f7;
+  font-size: 0.85rem;
+}
+
+.overlayList button {
+  border: none;
+  background: none;
+  color: #b3261e;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.overlayDraft {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.overlayDraft input[type="number"] {
+  width: 4.5rem;
+}
+
+.overlayDraft input[type="text"],
+.overlayDraft input:not([type]) {
+  flex: 1;
+  min-width: 120px;
+}
+
+.brandingSection > button {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: #b8791f;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
 }

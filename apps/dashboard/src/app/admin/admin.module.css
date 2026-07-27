@@ -1,0 +1,66 @@
+.page {
+  min-height: 100vh;
+  padding: 2.5rem 3rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.accountSection {
+  margin-bottom: 2.5rem;
+}
+
+.accountSection h3 {
+  margin-top: 1.5rem;
+  font-size: 0.95rem;
+  color: #62667a;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.empty {
+  color: #62667a;
+  font-size: 0.9rem;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid #dcdae4;
+  white-space: nowrap;
+}
+
+.table th {
+  color: #62667a;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.brandCell {
+  font-weight: 600;
+  vertical-align: top;
+}
+
+.failedCount {
+  color: #b3261e;
+  font-weight: 600;
+}

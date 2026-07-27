@@ -1,0 +1,24 @@
+{
+  "name": "@svt/render",
+  "private": true,
+  "version": "0.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.290",
+    "@remotion/renderer": "4.0.290",
+    "ffmpeg-static": "^5.2.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "remotion": "4.0.290"
+  },
+  "devDependencies": {
+    "@svt/config": "workspace:*",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "typescript": "^5.7.0"
+  }
+}

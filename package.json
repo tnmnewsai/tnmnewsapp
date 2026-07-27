@@ -7,7 +7,9 @@
   "packageManager": "pnpm@11.15.1",
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "powershell -ExecutionPolicy Bypass -File scripts/start-infra.ps1 && turbo run dev",
+    "dev:infra": "powershell -ExecutionPolicy Bypass -File scripts/start-infra.ps1",
+    "dev:infra:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-infra.ps1",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "db:generate": "pnpm --filter @svt/db generate",

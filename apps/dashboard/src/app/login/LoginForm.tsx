@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import styles from "./login.module.css";
@@ -46,6 +47,9 @@ export default function LoginForm() {
       <button type="submit" disabled={pending}>
         {pending ? "Signing in…" : "Sign in"}
       </button>
+      <Link href="/signup" style={{ textAlign: "center", fontSize: "0.85rem" }}>
+        Don&apos;t have an account? Sign up
+      </Link>
     </form>
   );
 }

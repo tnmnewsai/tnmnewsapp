@@ -8,5 +8,6 @@ allowBuilds:
   ffmpeg-static: true
   msgpackr-extract: true
   prisma: true
+  protobufjs: true
   sharp: true
   unrs-resolver: true

@@ -8,6 +8,11 @@ export { can } from "./rbac";
 export type { Capability, MembershipLike } from "./rbac";
 export { authConfigEdge } from "./edge";
 
+/** Same bcrypt used by the Credentials provider's compare() above — signup hashes with this, login verifies against it. */
+export function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
+}
+
 /**
  * Full Auth.js config (Node runtime only — pulls in Prisma/bcrypt via the
  * Credentials provider). Use this in route handlers and server components.

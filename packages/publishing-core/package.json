@@ -1,0 +1,16 @@
+{
+  "name": "@svt/publishing-core",
+  "private": true,
+  "version": "0.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@svt/config": "workspace:*",
+    "@types/node": "^20",
+    "typescript": "^5.7.0"
+  }
+}

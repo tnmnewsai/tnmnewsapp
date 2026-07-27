@@ -6,20 +6,28 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "start:prod": "cross-env NODE_ENV=production node --env-file=.env.production --import tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@svt/ai": "workspace:*",
     "@svt/db": "workspace:*",
+    "@svt/image-gen": "workspace:*",
     "@svt/ingestion": "workspace:*",
     "@svt/queue": "workspace:*",
+    "@svt/render": "workspace:*",
     "@svt/storage": "workspace:*",
     "@svt/transcription": "workspace:*",
+    "@svt/tts": "workspace:*",
+    "@svt/workflow": "workspace:*",
     "bullmq": "^5.34.0",
     "dotenv": "^16.4.5",
+    "inngest": "^3.27.0",
     "ioredis": "^5.4.1"
   },
   "devDependencies": {
     "@svt/config": "workspace:*",
+    "cross-env": "^7.0.3",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "@types/node": "^20"

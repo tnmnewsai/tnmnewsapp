@@ -32,6 +32,19 @@ async function main() {
     create: { userId: user.id, accountId: account.id, brandId: brand.id, role: "ADMIN" },
   });
 
+  // Account-wide grant (brandId: null) — separate from the brand-scoped one
+  // above, since it's what unlocks the /admin ops page (Milestone 14). The
+  // compound unique index rejects null in a where clause, so this can't use
+  // upsert() like the brand-scoped membership above.
+  const existingAccountWideMembership = await prisma.membership.findFirst({
+    where: { userId: user.id, accountId: account.id, brandId: null },
+  });
+  if (!existingAccountWideMembership) {
+    await prisma.membership.create({
+      data: { userId: user.id, accountId: account.id, brandId: null, role: "ADMIN" },
+    });
+  }
+
   console.log("Seeded demo account/brand/user:");
   console.log("  email:    admin@example.com");
   console.log("  password: admin123");

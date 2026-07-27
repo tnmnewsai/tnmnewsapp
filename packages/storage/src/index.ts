@@ -3,7 +3,7 @@ import { LocalStorageAdapter } from "./local";
 import { S3StorageAdapter } from "./s3";
 import type { StorageAdapter } from "./types";
 
-export type { StorageAdapter } from "./types";
+export type { StorageAdapter, ByteRange, ObjectStream } from "./types";
 
 let cached: StorageAdapter | undefined;
 
@@ -42,4 +42,43 @@ function requireEnv(name: string): string {
 
 export function sourceAssetStorageKey(brandId: string, sourceAssetId: string, ext: string): string {
   return `brands/${brandId}/source-assets/${sourceAssetId}/original.${ext}`;
+}
+
+export function renderedClipStorageKey(
+  brandId: string,
+  clipId: string,
+  renderedClipAssetId: string,
+  ext: string,
+): string {
+  return `brands/${brandId}/clips/${clipId}/renders/${renderedClipAssetId}.${ext}`;
+}
+
+export function musicTrackStorageKey(brandId: string, musicTrackId: string, ext: string): string {
+  return `brands/${brandId}/music/${musicTrackId}.${ext}`;
+}
+
+export function graphicAssetStorageKey(brandId: string, graphicAssetId: string, ext: string): string {
+  return `brands/${brandId}/graphics/${graphicAssetId}.${ext}`;
+}
+
+export function thumbnailAssetStorageKey(brandId: string, clipId: string, thumbnailAssetId: string, ext: string): string {
+  return `brands/${brandId}/clips/${clipId}/thumbnails/${thumbnailAssetId}.${ext}`;
+}
+
+/**
+ * Resolves several storage keys to local files simultaneously (nesting
+ * `withLocalFile` per key) — for the S3 driver, all N temp files exist only
+ * for the duration of `fn`; the local driver just hands back the real paths.
+ */
+export async function withLocalFiles<T>(
+  storage: StorageAdapter,
+  keys: string[],
+  fn: (paths: string[]) => Promise<T>,
+): Promise<T> {
+  async function loop(remaining: string[], acc: string[]): Promise<T> {
+    const [head, ...rest] = remaining;
+    if (head === undefined) return fn(acc);
+    return storage.withLocalFile(head, (resolvedPath) => loop(rest, [...acc, resolvedPath]));
+  }
+  return loop(keys, []);
 }

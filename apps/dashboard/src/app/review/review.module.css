@@ -1,0 +1,128 @@
+.page {
+  min-height: 100vh;
+  padding: 2.5rem 3rem;
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.help {
+  color: #62667a;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.queue,
+.recentList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid #dcdae4;
+  background: #ffffff;
+}
+
+.itemHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.video {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 8px;
+  background: #111;
+}
+
+.badge {
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid #dcdae4;
+  color: #62667a;
+}
+
+.badgeWarn {
+  composes: badge;
+  border-color: #e0a03a;
+  color: #8a5a10;
+  background: #fff4e0;
+}
+
+.flaggedList {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: #8a5a10;
+}
+
+.comments {
+  font-size: 0.85rem;
+  color: #62667a;
+}
+
+.comments ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.commentBox {
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #dcdae4;
+  font-size: 0.9rem;
+  min-height: 3rem;
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.actions button {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  color: #ffffff;
+}
+
+.actions button:first-child {
+  background: #2f9e44;
+}
+
+.actions button:nth-child(2) {
+  background: #b8791f;
+}
+
+.actions button:last-child {
+  background: #b3261e;
+}
+
+.error {
+  color: #b3261e;
+  font-size: 0.85rem;
+  margin: 0;
+}

@@ -1,5 +1,25 @@
 // Milestone 0 added tenancy (Account, Brand, User, Membership).
-// Milestone 1 adds SourceAsset + Transcript.
+// Milestone 1 added SourceAsset + Transcript.
+// Milestone 2 added Clip (manual creation).
+// Milestone 3 added ClipCandidate (AI-proposed clips), Clip.clipCandidateId,
+// and ClipCandidateBatch (tracks one "generate N candidates" request).
+// Milestone 4 added RenderedClipAsset (cut-only render output).
+// Milestone 5 adds BrandTemplate (versioned), MusicTrack, GraphicAsset, and
+// starts populating Clip.editState's overlays/musicTrackId/brandTemplateId keys.
+// Milestone 6 adds Gate 1 (content approval + moderation pre-check on
+// RenderedClipAsset), ThumbnailAsset (cover image compositing), and
+// ReviewComment (revision-request flow, reused by Gate 2 in Milestone 7).
+// Milestone 7 adds PostCopyBatch/PostCopy (multi-variant AI copy drafts) and
+// Gate 2 (publishing approval) fields on Clip.
+// Milestone 8 adds the platform-adapter framework: PlatformAccount (OAuth
+// connections), PublishingPackage (per-platform packaged content, or a
+// manual-fallback placeholder when no account is connected), ScheduledPost
+// (one canonical clip published at a chosen time), and PlatformPostResult
+// (per-platform outcome). Platform enum covers all four target platforms
+// from day one even though only YouTube has a real adapter — the rest are
+// additive in Milestones 9-11.
+// Milestone 13 adds AnalyticsSnapshot — recurring metric re-pulls
+// (1h/24h/7d, then a self-perpetuating weekly chain) per PlatformPostResult.
 // Every later milestone extends this file incrementally — see the build plan
 // at C:\Users\17205\.claude\plans\groovy-twirling-globe.md.
 
@@ -9,8 +29,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 /// Top-level tenant. One customer of the tool.
@@ -20,10 +41,56 @@ model Account {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  brands      Brand[]
-  memberships Membership[]
+  brands                 Brand[]
+  memberships            Membership[]
+  platformAppCredentials PlatformAppCredential[]
+  aiProviderCredentials  AiProviderCredential[]
 
   @@map("accounts")
+}
+
+/// One registered OAuth app (Client ID/Secret) per platform per Account —
+/// a company typically registers a single Google Cloud OAuth client / Meta
+/// app / TikTok app / X app used to connect every brand under it, so this is
+/// account-scoped, not brand-scoped. Configurable from the Platforms page;
+/// falls back to the platform's env vars when nothing is stored here yet.
+model PlatformAppCredential {
+  id              String   @id @default(cuid())
+  accountId       String
+  platform        Platform
+  clientIdEnc     String
+  clientSecretEnc String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, platform])
+  @@map("platform_app_credentials")
+}
+
+enum AiProvider {
+  OPENAI
+  ANTHROPIC
+}
+
+/// One API key per AI provider per Account — each account's transcription,
+/// clip-candidate detection, post-copy, and blog-to-video generation runs
+/// against its own key and its own bill, not a shared one. Configurable from
+/// the Platforms page; falls back to the provider's env var (OPENAI_API_KEY/
+/// ANTHROPIC_API_KEY) when nothing is stored here yet.
+model AiProviderCredential {
+  id        String     @id @default(cuid())
+  accountId String
+  provider  AiProvider
+  apiKeyEnc String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, provider])
+  @@map("ai_provider_credentials")
 }
 
 /// A property/channel under an Account — owns its own brand template,
@@ -36,9 +103,20 @@ model Brand {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  account      Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  memberships  Membership[]
-  sourceAssets SourceAsset[]
+  account              Account              @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  memberships          Membership[]
+  sourceAssets         SourceAsset[]
+  clips                Clip[]
+  clipCandidates       ClipCandidate[]
+  clipCandidateBatches ClipCandidateBatch[]
+  brandTemplates       BrandTemplate[]
+  musicTracks          MusicTrack[]
+  graphicAssets        GraphicAsset[]
+  postCopyBatches      PostCopyBatch[]
+  postCopies           PostCopy[]
+  platformAccounts     PlatformAccount[]
+  scheduledPosts       ScheduledPost[]
+  publishingPackages   PublishingPackage[]
 
   @@unique([accountId, slug])
   @@index([accountId])
@@ -55,6 +133,10 @@ model User {
 
   memberships         Membership[]
   createdSourceAssets SourceAsset[]
+  createdClips        Clip[]
+  contentApprovals    RenderedClipAsset[]
+  reviewComments      ReviewComment[]
+  publishingApprovals Clip[]              @relation("ClipPublishingApprovedBy")
 
   @@map("users")
 }
@@ -121,12 +203,76 @@ model SourceAsset {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  brand      Brand       @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  createdBy  User        @relation(fields: [createdByUserId], references: [id])
-  transcript Transcript?
+  brand                Brand                @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  createdBy            User                 @relation(fields: [createdByUserId], references: [id])
+  transcript           Transcript?
+  clips                Clip[]
+  clipCandidates       ClipCandidate[]
+  clipCandidateBatches ClipCandidateBatch[]
+  blogArticle          BlogArticle?
+  videoScript          VideoScript?
 
   @@index([brandId])
   @@map("source_assets")
+}
+
+/// The raw article text extracted from a BLOG_URL source, before any AI
+/// touches it — kept separate from SourceAsset so re-running script
+/// generation doesn't require re-fetching the page.
+model BlogArticle {
+  id            String   @id @default(cuid())
+  sourceAssetId String   @unique
+  title         String
+  bodyText      String
+  createdAt     DateTime @default(now())
+
+  sourceAsset SourceAsset @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+
+  @@map("blog_articles")
+}
+
+enum VideoScriptStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+/// The AI-authored narration breakdown of a BlogArticle into video segments.
+/// Once every segment has TTS audio + a generated image, the worker
+/// assembles them into an actual rendered video and a word-level Transcript
+/// (via Whisper re-transcription of the narration) — from that point on the
+/// SourceAsset is indistinguishable from one that started as real footage.
+model VideoScript {
+  id            String            @id @default(cuid())
+  sourceAssetId String            @unique
+  status        VideoScriptStatus @default(PENDING)
+  errorMessage  String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  sourceAsset SourceAsset     @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+  segments    ScriptSegment[]
+
+  @@map("video_scripts")
+}
+
+model ScriptSegment {
+  id            String   @id @default(cuid())
+  videoScriptId String
+  order         Int
+  narrationText String
+  visualPrompt  String
+  /// Set once this segment's TTS clip is generated — the real duration
+  /// (not an estimate) drives how long its image is shown on screen.
+  durationMs    Int?
+  createdAt     DateTime @default(now())
+
+  videoScript VideoScript @relation(fields: [videoScriptId], references: [id], onDelete: Cascade)
+
+  @@unique([videoScriptId, order])
+  @@index([videoScriptId])
+  @@map("script_segments")
 }
 
 enum TranscriptStatus {
@@ -157,4 +303,551 @@ model Transcript {
   sourceAsset SourceAsset @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
 
   @@map("transcripts")
+}
+
+enum ClipCandidateBatchStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+/// Tracks one "generate N candidates" request — the user-controlled count is
+/// the thing being tracked, not a fire-and-forget job. Gives the dashboard
+/// somewhere to show progress/failure instead of candidates just silently
+/// not showing up.
+model ClipCandidateBatch {
+  id            String                   @id @default(cuid())
+  brandId       String
+  sourceAssetId String
+  targetCount   Int
+  status        ClipCandidateBatchStatus @default(PENDING)
+  errorMessage  String?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  brand       Brand       @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  sourceAsset SourceAsset @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+
+  @@index([sourceAssetId])
+  @@map("clip_candidate_batches")
+}
+
+/// An AI-proposed clip-worthy segment. Sits upstream of Clip — accepting a
+/// candidate creates a Clip that points back via `clipCandidateId`; rejecting
+/// one just leaves it REJECTED. Manual clips (Milestone 2) have no candidate
+/// at all, so `Clip.clipCandidateId` is nullable, not the only path in.
+model ClipCandidate {
+  id            String              @id @default(cuid())
+  brandId       String
+  sourceAssetId String
+  startMs       Int
+  endMs         Int
+  title         String
+  rationale     String
+  /// Self-reported by the model, 0-1. A heuristic signal for sorting/review,
+  /// not a calibrated probability.
+  confidence    Float
+  status        ClipCandidateStatus @default(PENDING)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  brand       Brand       @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  sourceAsset SourceAsset @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+  clip        Clip?
+
+  @@index([brandId])
+  @@index([sourceAssetId])
+  @@map("clip_candidates")
+}
+
+enum ClipCandidateStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+/// A candidate or human-made cut of a SourceAsset. `editState` is a generic
+/// composable structure — Milestone 2 only populates `segments`; later
+/// milestones add captions/overlays/music/brand-template keys to the same
+/// JSON blob rather than growing the table schema. `clipCandidateId` makes
+/// AI-proposed clips optional, not the only path — manual clips (Milestone 2)
+/// have no candidate at all.
+model Clip {
+  id              String   @id @default(cuid())
+  brandId         String
+  sourceAssetId   String
+  clipCandidateId String?  @unique
+  title           String
+  /// { segments: [{ startMs, endMs }], ... future keys added by later milestones }
+  editState       Json
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  /// Gate 2 (publishing approval). Lives directly on Clip — unlike Gate 1,
+  /// which gates one specific RenderedClipAsset row, Gate 2 gates the
+  /// canonical "one clip + one message, posted everywhere" unit itself.
+  /// Requesting a fresh PostCopyBatch resets this back to PENDING_REVIEW,
+  /// the same "new generation resets approval" idea as Gate 1's per-row reset.
+  publishingApprovalStatus   PublishingApprovalStatus @default(NOT_APPLICABLE)
+  publishingApprovedByUserId String?
+  publishingApprovedAt       DateTime?
+  selectedPostCopyId         String?                  @unique
+
+  brand                Brand               @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  sourceAsset          SourceAsset         @relation(fields: [sourceAssetId], references: [id], onDelete: Cascade)
+  createdBy            User                @relation(fields: [createdByUserId], references: [id])
+  clipCandidate        ClipCandidate?      @relation(fields: [clipCandidateId], references: [id])
+  renderedAssets       RenderedClipAsset[]
+  thumbnailAssets      ThumbnailAsset[]
+  publishingApprovedBy User?               @relation("ClipPublishingApprovedBy", fields: [publishingApprovedByUserId], references: [id])
+  selectedPostCopy     PostCopy?           @relation("ClipSelectedPostCopy", fields: [selectedPostCopyId], references: [id])
+  postCopyBatches      PostCopyBatch[]
+  postCopies           PostCopy[]          @relation("ClipPostCopies")
+  scheduledPosts       ScheduledPost[]
+  publishingPackages   PublishingPackage[]
+
+  @@index([brandId])
+  @@index([sourceAssetId])
+  @@map("clips")
+}
+
+enum PublishingApprovalStatus {
+  NOT_APPLICABLE
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  REVISION_REQUESTED
+}
+
+enum RenderedClipAssetStatus {
+  PENDING
+  RENDERING
+  READY
+  FAILED
+}
+
+/// Output of the render pipeline for one Clip. Milestone 4 only produces a
+/// plain cut/re-encode at the source's original aspect ratio (`aspectRatio`
+/// is a fixed "original" for now); Milestone 5 adds captions/brand-template/
+/// music (still just new keys the pipeline consumes, not a schema change)
+/// and starts producing multiple per-platform aspect-ratio variants, hence
+/// this being its own table rather than fields on Clip. Milestone 6 adds
+/// Gate 1 (`contentApprovalStatus`) and an automated moderation pre-check
+/// directly on this row — each render is its own row already, so a
+/// re-render (a new row) naturally starts back at PENDING_REVIEW with no
+/// extra "reset" logic needed.
+model RenderedClipAsset {
+  id                      String                  @id @default(cuid())
+  clipId                  String
+  aspectRatio             String
+  /// Set once a BrandTemplate exists (Milestone 5) and this render used it.
+  templateVersion         Int?
+  storageKey              String?
+  status                  RenderedClipAssetStatus @default(PENDING)
+  errorMessage            String?
+  /// Only "original" (plain cut) renders skip Gate 1 and stay
+  /// NOT_APPLICABLE — Gate 1 only gates renders meant for publishing.
+  contentApprovalStatus   ContentApprovalStatus   @default(NOT_APPLICABLE)
+  contentApprovedByUserId String?
+  contentApprovedAt       DateTime?
+  moderationStatus        ModerationStatus        @default(PENDING)
+  /// [{ kind: "frame" | "text", label, flagged, categories: [...] }]
+  moderationDetails       Json?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+
+  clip               Clip                @relation(fields: [clipId], references: [id], onDelete: Cascade)
+  contentApprovedBy  User?               @relation(fields: [contentApprovedByUserId], references: [id])
+  thumbnailAssets    ThumbnailAsset[]
+  publishingPackages PublishingPackage[]
+
+  @@index([clipId])
+  @@map("rendered_clip_assets")
+}
+
+enum ContentApprovalStatus {
+  NOT_APPLICABLE
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  REVISION_REQUESTED
+}
+
+enum ModerationStatus {
+  PENDING
+  CLEAR
+  FLAGGED
+  FAILED
+}
+
+/// Immutable per-version row — "editing a template" creates a new row with
+/// `version = previous + 1` rather than mutating one in place, so an
+/// in-progress render (RenderedClipAsset.templateVersion) always stays
+/// pinned to whatever config it actually rendered with. The current template
+/// for a brand is just the highest `version`.
+model BrandTemplate {
+  id      String @id @default(cuid())
+  brandId String
+  name    String
+  version Int    @default(1)
+  /// { captionFontSize, captionColor, captionBackgroundColor, captionPosition,
+  ///   accentColor, logoGraphicAssetId?, logoPosition? }
+  config  Json
+
+  createdAt DateTime @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, version])
+  @@index([brandId])
+  @@map("brand_templates")
+}
+
+/// Uploaded background-music track. License fields are required at upload,
+/// not an afterthought — the same reasoning as SourceAsset.rightsAttestation.
+model MusicTrack {
+  id                 String    @id @default(cuid())
+  brandId            String
+  name               String
+  storageKey         String
+  licenseSource      String
+  licenseType        String
+  licenseAttribution String?
+  licenseExpiresAt   DateTime?
+  createdAt          DateTime  @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId])
+  @@map("music_tracks")
+}
+
+/// Brand-scoped image library for overlays (logos, stickers, callouts) and
+/// BrandTemplate logos — one upload flow, used from both places.
+model GraphicAsset {
+  id         String   @id @default(cuid())
+  brandId    String
+  name       String
+  storageKey String
+  createdAt  DateTime @default(now())
+
+  brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  thumbnailAssets ThumbnailAsset[]
+
+  @@index([brandId])
+  @@map("graphic_assets")
+}
+
+enum ThumbnailAssetStatus {
+  PENDING
+  RENDERING
+  READY
+  FAILED
+}
+
+/// A composited still cover image for a Clip — either a frame pulled from one
+/// of its renders at a chosen timestamp, or an existing GraphicAsset used as
+/// a custom base image, with title text + a short description composited on
+/// top (YouTube-thumbnail-style), rendered through the same Remotion text
+/// engine as clip overlays (Milestone 5) but as a still image.
+model ThumbnailAsset {
+  id                            String               @id @default(cuid())
+  clipId                        String
+  /// The render a frame was extracted from. Nullable when a custom base
+  /// image (`customBaseImageGraphicAssetId`) is used instead.
+  sourceRenderedClipAssetId     String?
+  sourceFrameMs                 Int?
+  customBaseImageGraphicAssetId String?
+  titleText                     String
+  descriptionText               String
+  storageKey                    String?
+  status                        ThumbnailAssetStatus @default(PENDING)
+  errorMessage                  String?
+  createdAt                     DateTime             @default(now())
+  updatedAt                     DateTime             @updatedAt
+
+  clip                        Clip                @relation(fields: [clipId], references: [id], onDelete: Cascade)
+  sourceRenderedClipAsset     RenderedClipAsset?  @relation(fields: [sourceRenderedClipAssetId], references: [id])
+  customBaseImageGraphicAsset GraphicAsset?       @relation(fields: [customBaseImageGraphicAssetId], references: [id])
+  publishingPackages          PublishingPackage[]
+
+  @@index([clipId])
+  @@map("thumbnail_assets")
+}
+
+enum ReviewTargetType {
+  RENDERED_CLIP_ASSET
+  /// Gate 2 revision-requests attach here — feedback applies to the whole
+  /// copy-variant batch, not one variant, since regeneration always redrafts
+  /// the full set.
+  CLIP
+}
+
+/// Backs the revision-request flow at both approval gates — a reviewer can
+/// leave a comment and kick an item back to `revision_requested` instead of
+/// a binary approve/reject. `targetType`/`targetId` is polymorphic on purpose:
+/// Milestone 6 targets RENDERED_CLIP_ASSET (Gate 1); Milestone 7 adds a CLIP
+/// target for Gate 2 (whole copy-variant batch, not one variant).
+model ReviewComment {
+  id           String           @id @default(cuid())
+  targetType   ReviewTargetType
+  targetId     String
+  authorUserId String
+  body         String
+  createdAt    DateTime         @default(now())
+
+  author User @relation(fields: [authorUserId], references: [id])
+
+  @@index([targetType, targetId])
+  @@map("review_comments")
+}
+
+enum PostCopyBatchStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+/// Tracks one "generate N copy variants" request for a Clip — same reasoning
+/// as ClipCandidateBatch (Milestone 3): the user-controlled count needs
+/// somewhere to show progress/failure rather than variants silently not
+/// showing up.
+model PostCopyBatch {
+  id           String              @id @default(cuid())
+  brandId      String
+  clipId       String
+  targetCount  Int
+  status       PostCopyBatchStatus @default(PENDING)
+  errorMessage String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  brand      Brand      @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  clip       Clip       @relation(fields: [clipId], references: [id], onDelete: Cascade)
+  postCopies PostCopy[]
+
+  @@index([clipId])
+  @@map("post_copy_batches")
+}
+
+enum PostCopyStatus {
+  DRAFT
+  APPROVED
+  REJECTED
+}
+
+/// One AI-drafted copy variant — canonical and platform-agnostic (sized to
+/// the tightest target platform's constraints), with per-platform mechanical
+/// packaging (truncation/hashtag placement/title-derivation) deferred to the
+/// publishing adapters (Milestone 8+). Approving one variant at Gate 2 marks
+/// it APPROVED and its siblings in the same batch REJECTED.
+model PostCopy {
+  id        String         @id @default(cuid())
+  brandId   String
+  clipId    String
+  batchId   String
+  text      String
+  /// string[], no leading "#"
+  hashtags  Json
+  status    PostCopyStatus @default(DRAFT)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  brand          Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  clip           Clip          @relation("ClipPostCopies", fields: [clipId], references: [id], onDelete: Cascade)
+  batch          PostCopyBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  selectedByClip Clip?         @relation("ClipSelectedPostCopy")
+
+  @@index([clipId])
+  @@index([batchId])
+  @@map("post_copies")
+}
+
+/// All four target platforms exist from day one so the framework (schema,
+/// capability descriptors, packaging math) is genuinely additive — only
+/// YouTube has a real adapter in Milestone 8; Meta/TikTok/X get theirs in
+/// Milestones 9-11 without touching this enum or the surrounding tables.
+enum Platform {
+  YOUTUBE
+  META
+  TIKTOK
+  X
+}
+
+enum PlatformAccountStatus {
+  CONNECTED
+  DISCONNECTED
+  EXPIRED
+}
+
+/// One OAuth-connected account (e.g. a YouTube channel) for a brand.
+/// Tokens are encrypted at rest (see packages/publishing/core/token-crypto)
+/// — these are real user credentials, not internal state.
+model PlatformAccount {
+  id                String                @id @default(cuid())
+  brandId           String
+  platform          Platform
+  externalAccountId String
+  label             String
+  accessTokenEnc    String
+  refreshTokenEnc   String?
+  tokenExpiresAt    DateTime?
+  status            PlatformAccountStatus @default(CONNECTED)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  brand              Brand               @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  publishingPackages PublishingPackage[]
+
+  @@unique([brandId, platform, externalAccountId])
+  @@index([brandId])
+  @@map("platform_accounts")
+}
+
+enum ScheduledPostStatus {
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  PARTIALLY_PUBLISHED
+  FAILED
+}
+
+/// One canonical clip + message, scheduled to go out at a chosen time.
+/// Per-platform packages/results hang off this — "partially published" is a
+/// real, expected outcome (e.g. YouTube succeeds, another platform is still
+/// manual-fallback).
+model ScheduledPost {
+  id           String              @id @default(cuid())
+  brandId      String
+  clipId       String
+  scheduledFor DateTime
+  status       ScheduledPostStatus @default(SCHEDULED)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  brand              Brand               @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  clip               Clip                @relation(fields: [clipId], references: [id], onDelete: Cascade)
+  publishingPackages PublishingPackage[]
+
+  @@index([brandId])
+  @@index([clipId])
+  @@map("scheduled_posts")
+}
+
+enum PublishingPackageStatus {
+  PENDING
+  MANUAL_FALLBACK
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+/// Per-platform packaged content for one ScheduledPost. `platformAccountId`
+/// is null when no connected account exists for that platform (no adapter
+/// built yet, or simply not connected) — the package still gets mechanically
+/// packaged content, just routed to the manual-fallback path (a human posts
+/// it natively) instead of automated publish.
+model PublishingPackage {
+  id                  String                  @id @default(cuid())
+  scheduledPostId     String
+  brandId             String
+  clipId              String
+  platform            Platform
+  platformAccountId   String?
+  title               String
+  description         String
+  /// string[], no leading "#"
+  tags                Json
+  renderedClipAssetId String
+  thumbnailAssetId    String?
+  status              PublishingPackageStatus @default(PENDING)
+  errorMessage        String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  scheduledPost      ScheduledPost       @relation(fields: [scheduledPostId], references: [id], onDelete: Cascade)
+  brand              Brand               @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  clip               Clip                @relation(fields: [clipId], references: [id], onDelete: Cascade)
+  platformAccount    PlatformAccount?    @relation(fields: [platformAccountId], references: [id])
+  renderedClipAsset  RenderedClipAsset   @relation(fields: [renderedClipAssetId], references: [id])
+  thumbnailAsset     ThumbnailAsset?     @relation(fields: [thumbnailAssetId], references: [id])
+  platformPostResult PlatformPostResult?
+
+  @@index([scheduledPostId])
+  @@map("publishing_packages")
+}
+
+enum PlatformPostResultStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  MANUAL_FALLBACK
+}
+
+/// The actual outcome of trying to publish one PublishingPackage.
+model PlatformPostResult {
+  id                  String                   @id @default(cuid())
+  publishingPackageId String                   @unique
+  platform            Platform
+  status              PlatformPostResultStatus @default(PENDING)
+  platformPostId      String?
+  platformUrl         String?
+  errorMessage        String?
+  publishedAt         DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  publishingPackage  PublishingPackage   @relation(fields: [publishingPackageId], references: [id], onDelete: Cascade)
+  analyticsSnapshots AnalyticsSnapshot[]
+
+  @@map("platform_post_results")
+}
+
+enum AnalyticsInterval {
+  PLUS_1H
+  PLUS_24H
+  PLUS_7D
+  /// Recurs indefinitely — each captured WEEKLY snapshot creates the next
+  /// one (dueAt + 7 days), a self-perpetuating chain rather than
+  /// pre-creating rows far in advance.
+  WEEKLY
+}
+
+enum AnalyticsSnapshotStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+/// One scheduled re-pull of a published post's metrics. Created in batches
+/// of three (1h/24h/7d) as soon as a PlatformPostResult succeeds; the WEEKLY
+/// chain is seeded once the 7d pull lands and extends itself from there.
+model AnalyticsSnapshot {
+  id                   String                  @id @default(cuid())
+  platformPostResultId String
+  interval             AnalyticsInterval
+  dueAt                DateTime
+  capturedAt           DateTime?
+  status               AnalyticsSnapshotStatus @default(PENDING)
+  /// Normalized cross-platform metrics — not every platform returns every
+  /// field (e.g. YouTube has no "shares"), so all are nullable.
+  views                Int?
+  likes                Int?
+  comments             Int?
+  shares               Int?
+  /// The full raw API response, for anything not captured in the
+  /// normalized fields above.
+  rawMetrics           Json?
+  errorMessage         String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  platformPostResult PlatformPostResult @relation(fields: [platformPostResultId], references: [id], onDelete: Cascade)
+
+  @@unique([platformPostResultId, interval, dueAt])
+  @@index([platformPostResultId])
+  @@map("analytics_snapshots")
 }

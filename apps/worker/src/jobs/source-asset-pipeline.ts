@@ -6,6 +6,8 @@ import { prisma, Prisma } from "@svt/db";
 import { fetchYouTubeVideo, fetchDriveVideo } from "@svt/ingestion";
 import { getStorage, sourceAssetStorageKey } from "@svt/storage";
 import { extractAudio, transcribeWithWhisper } from "@svt/transcription";
+import { resolveAiProviderApiKey } from "@svt/workflow";
+import { processBlogToVideoPipeline } from "./blog-to-video-pipeline";
 
 export interface SourceAssetJobData {
   sourceAssetId: string;
@@ -61,7 +63,10 @@ async function ensureFetched(sourceAssetId: string): Promise<void> {
 }
 
 async function transcribe(sourceAssetId: string): Promise<void> {
-  const asset = await prisma.sourceAsset.findUniqueOrThrow({ where: { id: sourceAssetId } });
+  const asset = await prisma.sourceAsset.findUniqueOrThrow({
+    where: { id: sourceAssetId },
+    include: { brand: { select: { accountId: true } } },
+  });
   if (!asset.storageKey) return; // fetch stage failed — nothing to transcribe
 
   await prisma.transcript.upsert({
@@ -71,10 +76,11 @@ async function transcribe(sourceAssetId: string): Promise<void> {
   });
 
   try {
+    const apiKey = await resolveAiProviderApiKey(asset.brand.accountId, "OPENAI");
     await getStorage().withLocalFile(asset.storageKey, (localVideoPath) =>
       withTempDir("svt-transcribe-", async (tempDir) => {
         const audioPath = await extractAudio(localVideoPath, tempDir);
-        const result = await transcribeWithWhisper(audioPath);
+        const result = await transcribeWithWhisper(apiKey, audioPath);
         await prisma.transcript.update({
           where: { sourceAssetId },
           data: {
@@ -97,6 +103,17 @@ async function transcribe(sourceAssetId: string): Promise<void> {
 
 export async function processSourceAssetJob(job: Job<SourceAssetJobData>): Promise<void> {
   const { sourceAssetId } = job.data;
+
+  const asset = await prisma.sourceAsset.findUniqueOrThrow({ where: { id: sourceAssetId } });
+  if (asset.type === "BLOG_URL") {
+    // Blog-to-video builds its own "footage" (article -> script -> TTS ->
+    // images -> render) and its own Transcript (Whisper re-transcription of
+    // the narration) in one pass — it doesn't go through ensureFetched/
+    // transcribe below, which assume real footage already exists to fetch.
+    await processBlogToVideoPipeline(sourceAssetId);
+    return;
+  }
+
   await ensureFetched(sourceAssetId);
   await transcribe(sourceAssetId);
 }

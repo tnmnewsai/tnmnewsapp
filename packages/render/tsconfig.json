@@ -1,0 +1,10 @@
+{
+  "extends": "@svt/config/base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "jsx": "react-jsx",
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "remotion/**/*.ts", "remotion/**/*.tsx"]
+}

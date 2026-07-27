@@ -8,14 +8,7 @@ interface WhisperWord {
   end: number;
 }
 
-export async function transcribeWithWhisper(audioPath: string): Promise<TranscriptionResult> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "OPENAI_API_KEY is not set. Add it to apps/worker/.env to enable transcription.",
-    );
-  }
-
+export async function transcribeWithWhisper(apiKey: string, audioPath: string): Promise<TranscriptionResult> {
   const client = new OpenAI({ apiKey });
 
   const response = await client.audio.transcriptions.create({
