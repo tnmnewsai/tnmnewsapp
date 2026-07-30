@@ -1,7 +1,7 @@
 import { auth } from "@/auth.edge";
 import { NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/signup"];
 
 export default auth((req) => {
   const isPublic =
