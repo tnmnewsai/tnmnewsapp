@@ -24,9 +24,9 @@
 // at C:\Users\17205\.claude\plans\groovy-twirling-globe.md.
 
 generator client {
-  provider      = "prisma-client-js"
-  output        = "../generated/client"
-  binaryTargets = ["native", "rhel-openssl-3.0.x", "linux-musl"]
+  provider   = "prisma-client"
+  output     = "../generated/client"
+  engineType = "client"
 }
 
 datasource db {
