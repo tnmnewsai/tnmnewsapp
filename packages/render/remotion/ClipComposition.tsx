@@ -87,7 +87,7 @@ export const ClipComposition: React.FC<ClipCompositionProps> = ({
             ...POSITION_STYLES[template.logoPosition ?? "top-right"],
           }}
         >
-          <Img src={template.logoSrc} style={{ width: 120, height: "auto" }} />
+          <Img src={template.logoSrc} style={{ width: 220, height: "auto" }} />
         </AbsoluteFill>
       )}
 

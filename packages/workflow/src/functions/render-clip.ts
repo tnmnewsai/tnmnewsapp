@@ -117,6 +117,8 @@ async function renderBranded(
       };
     });
 
+    const resolvedLogoPath = logoKeyIndex !== null ? paths[logoKeyIndex] : undefined;
+
     await renderBrandedClip({
       sourceVideoPath: cutPath,
       durationMs: segment.endMs - segment.startMs,
@@ -131,7 +133,7 @@ async function renderBranded(
             captionBackgroundColor: templateConfig.captionBackgroundColor,
             captionPosition: templateConfig.captionPosition,
             accentColor: templateConfig.accentColor,
-            logoPath: logoKeyIndex !== null ? paths[logoKeyIndex] : undefined,
+            logoPath: resolvedLogoPath,
             logoPosition: templateConfig.logoPosition,
           }
         : null,
