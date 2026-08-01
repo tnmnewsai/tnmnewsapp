@@ -7,6 +7,7 @@ import { runModeration } from "@svt/moderation";
 import type { ModerationItem, ModerationResult } from "@svt/moderation";
 
 export interface ModerationCheckInput {
+  apiKey: string;
   storageKey: string;
   durationMs: number;
   captionText: string;
@@ -39,7 +40,7 @@ export async function runRenderModerationCheck(input: ModerationCheckInput): Pro
         if (text.trim()) items.push({ kind: "text", label: `overlay-${i}`, text });
       });
 
-      return runModeration(items);
+      return runModeration(input.apiKey, items);
     } finally {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }

@@ -15,13 +15,8 @@ function toDataUrl(imagePath: string): string {
  * per item, in order, so frames (extracted video stills) and text (captions/
  * overlay copy) can be checked together instead of one API call each.
  */
-export async function runModeration(items: ModerationItem[]): Promise<ModerationResult> {
+export async function runModeration(apiKey: string, items: ModerationItem[]): Promise<ModerationResult> {
   if (items.length === 0) return { flagged: false, details: [] };
-
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is not set. Add it to apps/worker/.env to enable moderation.");
-  }
 
   const client = new OpenAI({ apiKey });
 

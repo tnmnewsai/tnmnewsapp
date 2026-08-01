@@ -7,6 +7,7 @@ import { cutClip, renderBrandedClip, type BrandedOverlayInput } from "@svt/rende
 import { inngest } from "../client";
 import type { BrandTemplateConfig, ClipEditState, ContentApprovalDecidedEvent, TranscriptWord } from "../types";
 import { runRenderModerationCheck } from "./run-moderation-check";
+import { resolveAiProviderApiKey } from "../lib/resolve-ai-credentials";
 
 export interface ClipRenderRequestedEvent {
   name: "clip/render.requested";
@@ -30,6 +31,7 @@ interface RenderStepResult extends RenderResult {
   /** Only populated for branded renders — "original" cuts skip Gate 1/moderation entirely. */
   captionText: string;
   overlayTexts: string[];
+  accountId: string;
 }
 
 async function renderOriginal(
@@ -176,10 +178,15 @@ export const renderClip = inngest.createFunction(
       result = await step.run("render", async () => {
         const rendered = await prisma.renderedClipAsset.findUniqueOrThrow({
           where: { id: renderedClipAssetId },
-          include: { clip: { include: { sourceAsset: { include: { transcript: true } } } } },
+          include: {
+            clip: {
+              include: { sourceAsset: { include: { transcript: true } }, brand: { select: { accountId: true } } },
+            },
+          },
         });
 
         const { clip } = rendered;
+        const accountId = clip.brand.accountId;
         const source = clip.sourceAsset;
         if (!source.storageKey) throw new Error("Source asset has no stored video.");
 
@@ -202,7 +209,14 @@ export const renderClip = inngest.createFunction(
 
           if (rendered.aspectRatio === "original") {
             const r = await renderOriginal(cutPath, clip.brandId, clip.id, rendered.id);
-            return { ...r, aspectRatio: rendered.aspectRatio, durationMs, captionText: "", overlayTexts: [] };
+            return {
+              ...r,
+              aspectRatio: rendered.aspectRatio,
+              durationMs,
+              captionText: "",
+              overlayTexts: [],
+              accountId,
+            };
           }
 
           const transcriptWords =
@@ -229,7 +243,7 @@ export const renderClip = inngest.createFunction(
             .filter((o) => o.type === "text" && o.text)
             .map((o) => o.text as string);
 
-          return { ...r, aspectRatio: rendered.aspectRatio, durationMs, captionText, overlayTexts };
+          return { ...r, aspectRatio: rendered.aspectRatio, durationMs, captionText, overlayTexts, accountId };
         } finally {
           fs.rmSync(tempDir, { recursive: true, force: true });
         }
@@ -264,7 +278,9 @@ export const renderClip = inngest.createFunction(
 
     const moderation = await step.run("run-moderation", async () => {
       try {
+        const apiKey = await resolveAiProviderApiKey(result!.accountId, "OPENAI");
         const outcome = await runRenderModerationCheck({
+          apiKey,
           storageKey: result!.storageKey,
           durationMs: result!.durationMs,
           captionText: result!.captionText,
