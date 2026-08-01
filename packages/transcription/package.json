@@ -8,8 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "ffmpeg-static": "^5.2.0",
-    "openai": "^4.77.0"
+    "ffmpeg-static": "^5.2.0"
   },
   "devDependencies": {
     "@svt/config": "workspace:*",
