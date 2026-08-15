@@ -87,3 +87,63 @@ export async function publishToInstagram(input: PublishInput): Promise<PublishRe
 
   return { platformPostId: mediaId, platformUrl: permalink ?? `https://www.instagram.com/reel/${mediaId}/` };
 }
+
+interface FacebookVideoUploadResponse {
+  id: string;
+}
+
+interface FacebookVideoStatusResponse {
+  status?: { video_status: "processing" | "ready" | "error" };
+}
+
+async function waitForFacebookVideoReady(videoId: string, accessToken: string): Promise<void> {
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    const res = await fetch(`${GRAPH_BASE_URL}/${videoId}?fields=status&access_token=${accessToken}`);
+    if (!res.ok) throw new Error(`Facebook video status check failed: ${res.status} ${await res.text()}`);
+    const { status } = (await res.json()) as FacebookVideoStatusResponse;
+
+    if (!status || status.video_status === "ready") return;
+    if (status.video_status === "error") throw new Error("Facebook failed to process the uploaded video.");
+
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+  }
+
+  throw new Error("Timed out waiting for Facebook to finish processing the video.");
+}
+
+/**
+ * Unlike Instagram's two-phase container-then-publish flow, a Page video
+ * post via `file_url` is created and live in one call — the returned id is
+ * immediately usable, so polling here is only to know when it's finished
+ * processing, not a precondition for the post to exist.
+ */
+export async function publishToFacebookPage(input: PublishInput): Promise<PublishResult> {
+  if (!input.videoPublicUrl) {
+    throw new Error(
+      "Facebook requires a publicly-reachable video URL to publish, which local filesystem storage " +
+        "can't provide. Set STORAGE_DRIVER=s3 (R2/S3) to enable Facebook publishing.",
+    );
+  }
+
+  const { accessToken, externalAccountId: pageId } = input.account;
+
+  const createRes = await fetch(`${GRAPH_BASE_URL}/${pageId}/videos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      file_url: input.videoPublicUrl,
+      description: input.content.description,
+      access_token: accessToken,
+    }),
+  });
+  if (!createRes.ok) {
+    throw new Error(`Facebook Page video upload failed: ${createRes.status} ${await createRes.text()}`);
+  }
+  const { id: videoId } = (await createRes.json()) as FacebookVideoUploadResponse;
+
+  await waitForFacebookVideoReady(videoId, accessToken);
+
+  return { platformPostId: videoId, platformUrl: `https://www.facebook.com/${pageId}/videos/${videoId}/` };
+}

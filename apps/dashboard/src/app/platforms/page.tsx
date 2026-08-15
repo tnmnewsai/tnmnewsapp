@@ -53,6 +53,7 @@ export default async function PlatformsPage({
 
   const hasConnectedYouTube = accounts.some((a) => a.platform === "YOUTUBE" && a.status === "CONNECTED");
   const hasConnectedMeta = accounts.some((a) => a.platform === "META" && a.status === "CONNECTED");
+  const hasConnectedFacebook = accounts.some((a) => a.platform === "FACEBOOK" && a.status === "CONNECTED");
   const hasConnectedTikTok = accounts.some((a) => a.platform === "TIKTOK" && a.status === "CONNECTED");
   const hasConnectedX = accounts.some((a) => a.platform === "X" && a.status === "CONNECTED");
 
@@ -83,7 +84,8 @@ export default async function PlatformsPage({
       <p className={styles.help}>
         One Client ID/Secret per platform, shared by every brand under this account — register an app in
         each platform&apos;s developer console, then paste its credentials here so the Connect buttons below
-        work without editing .env files.
+        work without editing .env files. The Meta App credentials below back both the Instagram and
+        Facebook connect buttons — no separate Facebook entry needed.
       </p>
       <PlatformCredentialsSection rows={credentialRows} />
 
@@ -107,6 +109,11 @@ export default async function PlatformsPage({
             Connect Meta (Instagram)
           </a>
         )}
+        {!hasConnectedFacebook && (
+          <a className={styles.connectButton} href="/api/platforms/facebook/connect">
+            Connect Facebook
+          </a>
+        )}
         {!hasConnectedTikTok && (
           <a className={styles.connectButton} href="/api/platforms/tiktok/connect">
             Connect TikTok
@@ -118,12 +125,12 @@ export default async function PlatformsPage({
           </a>
         )}
         <p className={styles.help}>
-          Meta publishes through Instagram&apos;s Content Publishing API, which requires a publicly-reachable
-          video URL — local filesystem storage can&apos;t provide one, so Meta publishing needs
-          STORAGE_DRIVER=s3 (R2/S3) configured. TikTok posts land as private (SELF_ONLY) drafts until your
-          TikTok app passes their content-posting audit for public posting. X requires a paid developer tier
-          (Basic or above) just to upload video media — connecting works with any tier, but publishing a
-          post with video will fail on a Free-tier app.
+          Meta publishes through Instagram&apos;s Content Publishing API; Facebook publishes to the first
+          Page your account manages. Both require a publicly-reachable video URL — local filesystem
+          storage can&apos;t provide one, so either needs STORAGE_DRIVER=s3 (R2/S3) configured. TikTok
+          posts land as private (SELF_ONLY) drafts until your TikTok app passes their content-posting audit
+          for public posting. X requires a paid developer tier (Basic or above) just to upload video media
+          — connecting works with any tier, but publishing a post with video will fail on a Free-tier app.
         </p>
       </div>
     </main>

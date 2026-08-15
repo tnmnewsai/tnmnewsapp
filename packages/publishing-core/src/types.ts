@@ -1,5 +1,5 @@
 /** Mirrors the Prisma `Platform` enum's string values — kept as a local type so this package has no hard dependency on @svt/db. */
-export type Platform = "YOUTUBE" | "META" | "TIKTOK" | "X";
+export type Platform = "YOUTUBE" | "META" | "FACEBOOK" | "TIKTOK" | "X";
 
 export interface PlatformCapabilities {
   platform: Platform;

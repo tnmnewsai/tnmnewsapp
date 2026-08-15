@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { scheduleClipForPublishing } from "../sources/actions";
 import styles from "./calendar.module.css";
 
-const ALL_PLATFORMS = ["YOUTUBE", "META", "TIKTOK", "X"] as const;
+const ALL_PLATFORMS = ["YOUTUBE", "META", "FACEBOOK", "TIKTOK", "X"] as const;
 
 export default function BankedSidebar({
   clips,

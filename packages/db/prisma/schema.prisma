@@ -674,6 +674,10 @@ model PostCopy {
 enum Platform {
   YOUTUBE
   META
+  /// A Facebook Page post, distinct from META (which publishes to the Page's
+  /// linked Instagram account) — separate PlatformAccount/adapter, but reuses
+  /// the same registered Meta App credentials (see resolvePlatformAppCredentials).
+  FACEBOOK
   TIKTOK
   X
 }

@@ -6,7 +6,7 @@ import type { Platform } from "@svt/publishing-core";
 import { scheduleClipForPublishing } from "./actions";
 import styles from "./sources.module.css";
 
-const ALL_PLATFORMS = ["YOUTUBE", "META", "TIKTOK", "X"] as const;
+const ALL_PLATFORMS = ["YOUTUBE", "META", "FACEBOOK", "TIKTOK", "X"] as const;
 
 export interface ScheduledPostPackageView {
   id: string;

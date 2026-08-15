@@ -1,7 +1,7 @@
 import { prisma, Prisma } from "@svt/db";
 import type { Platform, PlatformAdapter } from "@svt/publishing-core";
 import { youtubeAdapter } from "@svt/publishing-youtube";
-import { metaAdapter } from "@svt/publishing-meta";
+import { facebookAdapter, metaAdapter } from "@svt/publishing-meta";
 import { tiktokAdapter } from "@svt/publishing-tiktok";
 import { xAdapter } from "@svt/publishing-x";
 import { resolveAccessToken } from "../lib/resolve-access-token";
@@ -10,6 +10,7 @@ import { inngest } from "../client";
 const ADAPTERS: Partial<Record<Platform, PlatformAdapter>> = {
   YOUTUBE: youtubeAdapter,
   META: metaAdapter,
+  FACEBOOK: facebookAdapter,
   TIKTOK: tiktokAdapter,
   X: xAdapter,
 };

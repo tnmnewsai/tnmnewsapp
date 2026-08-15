@@ -47,3 +47,48 @@ export async function getMetaAnalytics(input: GetAnalyticsInput): Promise<Analyt
     raw: { media, plays, shares },
   };
 }
+
+interface FacebookVideoResponse {
+  reactions?: { summary?: { total_count: number } };
+  comments?: { summary?: { total_count: number } };
+}
+
+interface FacebookVideoInsightsResponse {
+  data?: { name: string; values: { value: number }[] }[];
+}
+
+/**
+ * Reactions/comments come from the video object itself; views/shares need
+ * the separate video_insights endpoint — same best-effort shape as
+ * `getMetaAnalytics` above.
+ */
+export async function getFacebookPageAnalytics(input: GetAnalyticsInput): Promise<AnalyticsMetrics> {
+  const { accessToken } = input.account;
+
+  const videoRes = await fetch(
+    `${GRAPH_BASE_URL}/${input.platformPostId}?fields=reactions.summary(true).limit(0),comments.summary(true).limit(0)&access_token=${accessToken}`,
+  );
+  if (!videoRes.ok) throw new Error(`Facebook analytics fetch failed: ${videoRes.status} ${await videoRes.text()}`);
+  const video = (await videoRes.json()) as FacebookVideoResponse;
+
+  let views: number | undefined;
+  let shares: number | undefined;
+  const insightsRes = await fetch(
+    `${GRAPH_BASE_URL}/${input.platformPostId}/video_insights?metric=total_video_views,total_video_shares&access_token=${accessToken}`,
+  );
+  if (insightsRes.ok) {
+    const insights = (await insightsRes.json()) as FacebookVideoInsightsResponse;
+    for (const metric of insights.data ?? []) {
+      if (metric.name === "total_video_views") views = metric.values[0]?.value;
+      if (metric.name === "total_video_shares") shares = metric.values[0]?.value;
+    }
+  }
+
+  return {
+    views,
+    likes: video.reactions?.summary?.total_count,
+    comments: video.comments?.summary?.total_count,
+    shares,
+    raw: { video, views, shares },
+  };
+}

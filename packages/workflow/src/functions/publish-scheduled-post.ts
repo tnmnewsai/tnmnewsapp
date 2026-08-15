@@ -2,7 +2,7 @@ import { prisma, Prisma } from "@svt/db";
 import { getStorage } from "@svt/storage";
 import type { Platform, PlatformAdapter } from "@svt/publishing-core";
 import { youtubeAdapter } from "@svt/publishing-youtube";
-import { metaAdapter } from "@svt/publishing-meta";
+import { facebookAdapter, metaAdapter } from "@svt/publishing-meta";
 import { tiktokAdapter } from "@svt/publishing-tiktok";
 import { xAdapter } from "@svt/publishing-x";
 import { inngest } from "../client";
@@ -13,10 +13,11 @@ export interface PublishScheduledPostRequestedEvent {
   data: { scheduledPostId: string };
 }
 
-/** All four target platforms now have real adapters. */
+/** All five target platforms now have real adapters. */
 const ADAPTERS: Partial<Record<Platform, PlatformAdapter>> = {
   YOUTUBE: youtubeAdapter,
   META: metaAdapter,
+  FACEBOOK: facebookAdapter,
   TIKTOK: tiktokAdapter,
   X: xAdapter,
 };

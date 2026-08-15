@@ -17,11 +17,19 @@ export const PLATFORM_CAPABILITIES: Record<Platform, PlatformCapabilities> = {
   },
   META: {
     platform: "META",
-    displayName: "Instagram / Facebook",
+    displayName: "Instagram",
     maxTitleLength: 0,
     maxDescriptionLength: 2200,
     maxTags: 30,
     supportsThumbnail: true,
+  },
+  FACEBOOK: {
+    platform: "FACEBOOK",
+    displayName: "Facebook",
+    maxTitleLength: 0,
+    maxDescriptionLength: 5000,
+    maxTags: 30,
+    supportsThumbnail: false,
   },
   TIKTOK: {
     platform: "TIKTOK",
