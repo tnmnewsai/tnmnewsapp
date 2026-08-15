@@ -3,6 +3,7 @@ import { prisma } from "@svt/db";
 import { QUEUE_NAMES, getQueueJobCounts } from "@svt/queue";
 import { requireAccountAdminAccounts, requireCurrentUser } from "@/lib/current-brand";
 import AccountSecurityForm from "./AccountSecurityForm";
+import CreateBrandForm from "./CreateBrandForm";
 import styles from "./admin.module.css";
 
 const JOB_TYPES = [
@@ -54,6 +55,13 @@ export default async function AdminPage() {
       {accountViews.map(({ account, memberships, brandQueueCounts }) => (
         <section key={account.id} className={styles.accountSection}>
           <h2>{account.name}</h2>
+
+          <h3>Add a brand</h3>
+          <p className={styles.empty}>
+            Each brand is a fully separate property under this account — its own platform connections,
+            clips, and schedule, switchable from the nav.
+          </p>
+          <CreateBrandForm accountId={account.id} />
 
           <h3>Brands &amp; queue health</h3>
           <div className={styles.tableWrap}>
