@@ -39,23 +39,25 @@ interface YouTubeChannelListResponse {
   items?: { id: string; snippet: { title: string } }[];
 }
 
-async function fetchChannelInfo(accessToken: string): Promise<{ externalAccountId: string; label: string }> {
-  const res = await fetch("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) throw new Error(`Failed to fetch YouTube channel info: ${res.status} ${await res.text()}`);
-
-  const data = (await res.json()) as YouTubeChannelListResponse;
-  const channel = data.items?.[0];
-  if (!channel) throw new Error("No YouTube channel found for this Google account.");
-  return { externalAccountId: channel.id, label: channel.snippet.title };
+export interface GoogleUserTokens {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt: Date;
 }
 
-export async function exchangeYouTubeCode(
+/**
+ * Walks an OAuth `code` to a Google access/refresh token pair without
+ * picking a channel yet — a Google account can own several YouTube
+ * channels (a personal one plus one or more Brand Channels), so the
+ * dashboard's connect flow lists them via `listYouTubeChannels` and lets
+ * the user choose, rather than defaulting to whichever channel the API
+ * happens to return first.
+ */
+export async function exchangeCodeForGoogleTokens(
   credentials: PlatformAppCredentials,
   code: string,
   redirectUri: string,
-): Promise<ExchangedTokens> {
+): Promise<GoogleUserTokens> {
   const res = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -70,14 +72,59 @@ export async function exchangeYouTubeCode(
   if (!res.ok) throw new Error(`YouTube OAuth token exchange failed: ${res.status} ${await res.text()}`);
 
   const data = (await res.json()) as GoogleTokenResponse;
-  const { externalAccountId, label } = await fetchChannelInfo(data.access_token);
-
   return {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresAt: new Date(Date.now() + data.expires_in * 1000),
-    externalAccountId,
-    label,
+  };
+}
+
+/** For the YouTube connect flow's channel-picker. */
+export async function listYouTubeChannels(accessToken: string): Promise<{ id: string; title: string }[]> {
+  const res = await fetch("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error(`Failed to fetch YouTube channels: ${res.status} ${await res.text()}`);
+
+  const data = (await res.json()) as YouTubeChannelListResponse;
+  return (data.items ?? []).map((c) => ({ id: c.id, title: c.snippet.title }));
+}
+
+/** Used both by the picker's "confirm selection" step and could be reused for future re-verification — looks up one specific channel by id. */
+export async function findYouTubeChannelById(
+  accessToken: string,
+  channelId: string,
+): Promise<{ externalAccountId: string; label: string }> {
+  const channels = await listYouTubeChannels(accessToken);
+  const channel = channels.find((c) => c.id === channelId);
+  if (!channel) {
+    throw new Error("This YouTube channel is no longer available for this Google account — reconnect on the Platforms page.");
+  }
+  return { externalAccountId: channel.id, label: channel.title };
+}
+
+/**
+ * Auto-picks the first channel. The dashboard's actual YouTube connect flow
+ * uses `exchangeCodeForGoogleTokens` + `listYouTubeChannels` +
+ * `findYouTubeChannelById` instead so the user can choose — this is kept
+ * for PlatformAdapter interface completeness.
+ */
+export async function exchangeYouTubeCode(
+  credentials: PlatformAppCredentials,
+  code: string,
+  redirectUri: string,
+): Promise<ExchangedTokens> {
+  const tokens = await exchangeCodeForGoogleTokens(credentials, code, redirectUri);
+  const channels = await listYouTubeChannels(tokens.accessToken);
+  const channel = channels[0];
+  if (!channel) throw new Error("No YouTube channel found for this Google account.");
+
+  return {
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    expiresAt: tokens.expiresAt,
+    externalAccountId: channel.id,
+    label: channel.title,
   };
 }
 
