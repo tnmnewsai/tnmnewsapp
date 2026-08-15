@@ -5,6 +5,7 @@ import { resolvePlatformAppCredentials } from "./resolve-app-credentials";
 
 interface AccountForToken {
   id: string;
+  externalAccountId: string;
   accessTokenEnc: string;
   refreshTokenEnc: string | null;
   tokenExpiresAt: Date | string | null;
@@ -30,7 +31,11 @@ export async function resolveAccessToken(
   const expiringSoon = expiresAt !== null && expiresAt < Date.now() + 60_000;
   if (expiringSoon && account.refreshTokenEnc) {
     const credentials = await resolvePlatformAppCredentials(accountId, adapter.platform);
-    const refreshed = await adapter.refreshAccessToken(credentials, decryptToken(account.refreshTokenEnc));
+    const refreshed = await adapter.refreshAccessToken(
+      credentials,
+      decryptToken(account.refreshTokenEnc),
+      account.externalAccountId,
+    );
     accessToken = refreshed.accessToken;
     await prisma.platformAccount.update({
       where: { id: account.id },

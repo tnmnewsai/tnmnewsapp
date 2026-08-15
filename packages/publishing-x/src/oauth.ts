@@ -89,6 +89,7 @@ export async function exchangeXCode(
 export async function refreshXAccessToken(
   credentials: PlatformAppCredentials,
   refreshToken: string,
+  _externalAccountId: string,
 ): Promise<RefreshedTokens> {
   const res = await fetch(TOKEN_URL, {
     method: "POST",

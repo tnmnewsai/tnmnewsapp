@@ -84,6 +84,7 @@ export async function exchangeYouTubeCode(
 export async function refreshYouTubeAccessToken(
   credentials: PlatformAppCredentials,
   refreshToken: string,
+  _externalAccountId: string,
 ): Promise<RefreshedTokens> {
   const res = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",

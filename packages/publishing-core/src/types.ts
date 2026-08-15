@@ -125,7 +125,19 @@ export interface PlatformAdapter {
     redirectUri: string,
     codeVerifier?: string,
   ): Promise<ExchangedTokens>;
-  refreshAccessToken(credentials: PlatformAppCredentials, refreshToken: string): Promise<RefreshedTokens>;
+  /**
+   * `externalAccountId` is the already-connected PlatformAccount's id (e.g.
+   * a specific Facebook Page or Instagram account) — required by adapters
+   * where one OAuth token/refresh token can represent several sub-accounts
+   * (Meta/Facebook), so a refresh re-targets the SAME sub-account rather
+   * than silently drifting to whichever one an API happens to list first.
+   * Ignored by adapters with a 1:1 token-to-account relationship.
+   */
+  refreshAccessToken(
+    credentials: PlatformAppCredentials,
+    refreshToken: string,
+    externalAccountId: string,
+  ): Promise<RefreshedTokens>;
   publish(input: PublishInput): Promise<PublishResult>;
   getAnalytics(input: GetAnalyticsInput): Promise<AnalyticsMetrics>;
 }
