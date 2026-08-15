@@ -38,6 +38,7 @@ async function ensureFetched(sourceAssetId: string): Promise<void> {
             storageKey: key,
             durationMs: media.durationMs,
             originalFilename: media.originalFilename,
+            errorMessage: null,
           },
         });
       } else if (asset.type === "DRIVE_LINK") {
@@ -47,7 +48,7 @@ async function ensureFetched(sourceAssetId: string): Promise<void> {
         await getStorage().putFile(key, media.localPath);
         await prisma.sourceAsset.update({
           where: { id: asset.id },
-          data: { status: "READY", storageKey: key, durationMs: media.durationMs },
+          data: { status: "READY", storageKey: key, durationMs: media.durationMs, errorMessage: null },
         });
       } else {
         throw new Error(`Don't know how to fetch source asset type: ${asset.type}`);
@@ -80,6 +81,19 @@ async function transcribe(sourceAssetId: string): Promise<void> {
     await getStorage().withLocalFile(asset.storageKey, (localVideoPath) =>
       withTempDir("svt-transcribe-", async (tempDir) => {
         const audioPath = await extractAudio(localVideoPath, tempDir);
+        if (!audioPath) {
+          await prisma.transcript.update({
+            where: { sourceAssetId },
+            data: {
+              status: "READY",
+              provider: "none-silent-video",
+              language: null,
+              rawWords: [] as unknown as Prisma.InputJsonValue,
+              errorMessage: null,
+            },
+          });
+          return;
+        }
         const result = await transcribeWithWhisper(apiKey, audioPath);
         await prisma.transcript.update({
           where: { sourceAssetId },

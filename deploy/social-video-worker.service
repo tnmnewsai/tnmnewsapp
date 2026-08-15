@@ -1,0 +1,19 @@
+[Unit]
+Description=TNM Social Video background worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/tnmnewsapp
+ExecStart=/usr/bin/pnpm --filter @svt/worker start:prod
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+KillSignal=SIGTERM
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

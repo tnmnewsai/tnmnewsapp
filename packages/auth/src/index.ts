@@ -13,6 +13,10 @@ export function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }
 
+export function verifyPassword(password: string, passwordHash: string): Promise<boolean> {
+  return bcrypt.compare(password, passwordHash);
+}
+
 /**
  * Full Auth.js config (Node runtime only — pulls in Prisma/bcrypt via the
  * Credentials provider). Use this in route handlers and server components.

@@ -64,3 +64,35 @@
   color: #b3261e;
   font-weight: 600;
 }
+
+.securitySection {
+  margin-bottom: 2.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.securitySection > h2,
+.securitySection > p { grid-column: 1 / -1; margin: 0; }
+
+.securityForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #dcdae4;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.securityForm h3 { margin: 0; }
+.securityForm label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; color: #62667a; }
+.securityForm input { padding: 0.55rem 0.65rem; border: 1px solid #dcdae4; border-radius: 8px; font: inherit; }
+.securityForm button { align-self: flex-start; padding: 0.55rem 0.9rem; border: 0; border-radius: 8px; background: #b8791f; color: #fff; font-weight: 600; cursor: pointer; }
+.securityForm button:disabled { opacity: 0.6; cursor: wait; }
+.formError { margin: 0; color: #b3261e; font-size: 0.85rem; }
+
+@media (max-width: 720px) {
+  .page { padding: 1.5rem 1rem; }
+  .securitySection { grid-template-columns: 1fr; }
+}

@@ -49,6 +49,10 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
   }
 
+  async getUploadUrl(): Promise<string | null> {
+    return null;
+  }
+
   async getPublicUrl(): Promise<string | null> {
     return null;
   }

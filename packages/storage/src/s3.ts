@@ -25,6 +25,9 @@ export class S3StorageAdapter implements StorageAdapter {
     this.client = new S3Client({
       region: config.region,
       endpoint: config.endpoint,
+      // Required by Supabase Storage and supported by other S3-compatible
+      // providers; keeps the bucket in the request path instead of DNS.
+      forcePathStyle: Boolean(config.endpoint),
       credentials: {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,
@@ -96,6 +99,14 @@ export class S3StorageAdapter implements StorageAdapter {
     } catch {
       return false;
     }
+  }
+
+  async getUploadUrl(key: string, contentType: string, expiresInSeconds = 900): Promise<string> {
+    return getSignedUrl(
+      this.client,
+      new PutObjectCommand({ Bucket: this.config.bucket, Key: key, ContentType: contentType }),
+      { expiresIn: expiresInSeconds },
+    );
   }
 
   async getPublicUrl(key: string, expiresInSeconds = 3600): Promise<string | null> {

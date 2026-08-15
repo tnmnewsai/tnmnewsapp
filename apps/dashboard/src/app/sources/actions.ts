@@ -78,6 +78,65 @@ export async function createSourceAsset(formData: FormData): Promise<void> {
   redirect(`/sources/${sourceAssetId}`);
 }
 
+export async function prepareSourceVideoUpload(input: {
+  filename: string;
+  contentType: string;
+  size: number;
+}): Promise<{ sourceAssetId: string; uploadUrl: string }> {
+  const startedAt = Date.now();
+  const brand = await requireCurrentBrand();
+  const user = await requireCurrentUser();
+  const filename = path.basename(input.filename).slice(0, 255);
+  const contentType = input.contentType || "application/octet-stream";
+
+  if (!filename || !contentType.startsWith("video/") || input.size <= 0) {
+    throw new Error("Choose a valid video file to upload.");
+  }
+
+  const created = await prisma.sourceAsset.create({
+    data: {
+      brandId: brand.id,
+      type: "VIDEO_UPLOAD",
+      originalFilename: filename,
+      rightsAttestation: true,
+      createdByUserId: user.id,
+    },
+  });
+
+  const rawExt = path.extname(filename).replace(".", "").toLowerCase();
+  const ext = /^[a-z0-9]{1,10}$/.test(rawExt) ? rawExt : "mp4";
+  const key = sourceAssetStorageKey(brand.id, created.id, ext);
+  const uploadUrl = await getStorage().getUploadUrl(key, contentType);
+
+  if (!uploadUrl) {
+    await prisma.sourceAsset.delete({ where: { id: created.id } });
+    throw new Error("Direct video uploads require S3-compatible storage.");
+  }
+
+  await prisma.sourceAsset.update({ where: { id: created.id }, data: { storageKey: key } });
+  console.log(JSON.stringify({ level: "info", msg: "video upload prepared", sourceAssetId: created.id, size: input.size, ms: Date.now() - startedAt }));
+  return { sourceAssetId: created.id, uploadUrl };
+}
+
+export async function completeSourceVideoUpload(sourceAssetId: string): Promise<string> {
+  const startedAt = Date.now();
+  const brand = await requireCurrentBrand();
+  const source = await prisma.sourceAsset.findFirst({
+    where: { id: sourceAssetId, brandId: brand.id, type: "VIDEO_UPLOAD" },
+  });
+  if (!source?.storageKey) throw new Error("The pending video upload was not found.");
+  if (!(await getStorage().exists(source.storageKey))) {
+    throw new Error("The video did not finish uploading. Please try again.");
+  }
+
+  await prisma.sourceAsset.update({ where: { id: source.id }, data: { status: "READY" } });
+  const queue = createQueue<{ sourceAssetId: string }>(QUEUE_NAMES.sourceAssetPipeline, brand.id);
+  await queue.add("process", { sourceAssetId: source.id });
+  revalidatePath("/sources");
+  console.log(JSON.stringify({ level: "info", msg: "video upload completed", sourceAssetId: source.id, ms: Date.now() - startedAt }));
+  return source.id;
+}
+
 interface TranscriptWordInput {
   word: string;
   startMs: number;

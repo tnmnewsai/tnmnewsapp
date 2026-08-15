@@ -26,6 +26,8 @@ export interface StorageAdapter {
   /** Streams the object (optionally a byte range) for serving directly over HTTP. */
   getObjectStream(key: string, range?: ByteRange): Promise<ObjectStream>;
   exists(key: string): Promise<boolean>;
+  /** Presigned browser upload URL when the backing store is internet-reachable. */
+  getUploadUrl(key: string, contentType: string, expiresInSeconds?: number): Promise<string | null>;
   /**
    * A URL a third party (e.g. Meta's servers, fetching `video_url` for
    * Instagram content publishing) can fetch directly, with no auth of ours

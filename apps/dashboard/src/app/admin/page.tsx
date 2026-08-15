@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@svt/db";
 import { QUEUE_NAMES, getQueueJobCounts } from "@svt/queue";
-import { requireAccountAdminAccounts } from "@/lib/current-brand";
+import { requireAccountAdminAccounts, requireCurrentUser } from "@/lib/current-brand";
+import AccountSecurityForm from "./AccountSecurityForm";
 import styles from "./admin.module.css";
 
 const JOB_TYPES = [
@@ -12,7 +13,7 @@ const JOB_TYPES = [
 ] as const;
 
 export default async function AdminPage() {
-  const accounts = await requireAccountAdminAccounts();
+  const [accounts, currentUser] = await Promise.all([requireAccountAdminAccounts(), requireCurrentUser()]);
 
   const accountViews = await Promise.all(
     accounts.map(async (account) => {
@@ -47,6 +48,8 @@ export default async function AdminPage() {
         <h1>Admin / Ops</h1>
         <Link href="/">Back home</Link>
       </div>
+
+      <AccountSecurityForm email={currentUser.email ?? ""} />
 
       {accountViews.map(({ account, memberships, brandQueueCounts }) => (
         <section key={account.id} className={styles.accountSection}>

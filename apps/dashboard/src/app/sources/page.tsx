@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@svt/db";
 import { requireCurrentBrand } from "@/lib/current-brand";
 import AddSourceForm from "./AddSourceForm";
-import { createSourceAsset } from "./actions";
+import { completeSourceVideoUpload, createSourceAsset, prepareSourceVideoUpload } from "./actions";
 import styles from "./sources.module.css";
 
 export default async function SourcesPage() {
@@ -20,7 +20,11 @@ export default async function SourcesPage() {
         <Link href="/">Back</Link>
       </div>
 
-      <AddSourceForm action={createSourceAsset} />
+      <AddSourceForm
+        action={createSourceAsset}
+        prepareVideoUpload={prepareSourceVideoUpload}
+        completeVideoUpload={completeSourceVideoUpload}
+      />
 
       {sources.length === 0 ? (
         <p className={styles.empty}>No sources yet — add one above.</p>
