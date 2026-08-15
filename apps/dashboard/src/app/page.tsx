@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import { prisma } from "@svt/db";
 import { requireCurrentBrand } from "@/lib/current-brand";
-import { switchBrand } from "./switch-brand";
+import BrandSwitcher from "./BrandSwitcher";
 import styles from "./page.module.css";
 
 type IconName =
@@ -111,6 +111,11 @@ export default async function Home() {
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <Link href="/" className={styles.logo}><span className={styles.logoMark}><Icon name="play" size={18}/></span><span>Social Video</span></Link>
+        <BrandSwitcher
+          currentBrandId={currentBrand.id}
+          currentBrandName={currentBrand.name}
+          options={brandMemberships.map((m) => ({ brandId: m.brandId!, name: m.brand!.name }))}
+        />
         <nav className={styles.nav} aria-label="Main navigation">
           <p>Workspace</p>
           {nav.map(([label, href, icon], index) => <Link key={href} href={href} className={index === 0 ? styles.activeNav : ""}><Icon name={icon}/><span>{label}</span>{label === "Content review" && contentReviewCount > 0 && <b>{contentReviewCount}</b>}{label === "Publishing review" && publishingReviewCount > 0 && <b>{publishingReviewCount}</b>}</Link>)}
@@ -126,10 +131,6 @@ export default async function Home() {
       <main className={styles.main}>
         <header className={styles.topbar}>
           <div className={styles.mobileLogo}><span className={styles.logoMark}><Icon name="play" size={16}/></span> Social Video</div>
-          <div className={styles.brandPicker}>
-            <span>Brand</span>
-            {brandMemberships.length > 1 ? <form action={switchBrand}><select name="brandId" defaultValue={currentBrand.id} aria-label="Current brand">{brandMemberships.map((m) => <option key={m.brandId} value={m.brandId!}>{m.brand!.name}</option>)}</select><button type="submit">Switch</button></form> : <strong>{currentBrand.name}</strong>}
-          </div>
           <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}><button className={styles.signOut} type="submit">Sign out</button></form>
         </header>
 
